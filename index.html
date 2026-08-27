@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Склад — версия 1</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f4f6f8;color:#18212b}
+.app{display:flex;min-height:100vh}.side{width:230px;background:#18212b;color:white;padding:22px 14px}.logo{font-size:22px;font-weight:700;padding:8px 12px 25px}.nav button{display:block;width:100%;border:0;background:transparent;color:#dce4eb;text-align:left;padding:13px 14px;border-radius:9px;margin:3px 0;font-size:15px;cursor:pointer}.nav button.active,.nav button:hover{background:#2c3b49;color:#fff}.main{flex:1;padding:28px;max-width:1250px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}.title{font-size:28px;font-weight:700}.btn{background:#1f6feb;color:#fff;border:0;border-radius:8px;padding:11px 16px;cursor:pointer;font-size:14px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}.card{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 5px #00000010}.num{font-size:28px;font-weight:700;margin-top:8px}.muted{color:#74808c;font-size:13px}.panel{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 5px #00000010}.panel h3{margin-top:0}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:13px;border-bottom:1px solid #edf0f2}.badge{display:inline-block;padding:5px 9px;border-radius:20px;background:#e9f5ed;color:#237a3b;font-size:12px}.actions{display:flex;gap:8px}.modal{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center}.modal.show{display:flex}.modalbox{background:#fff;border-radius:14px;width:min(500px,92%);padding:22px}.modalbox input,.modalbox select{width:100%;padding:11px;margin:7px 0 14px;border:1px solid #d8dee4;border-radius:8px}.mobile{display:none}
+@media(max-width:800px){.side{display:none}.main{padding:18px}.cards{grid-template-columns:repeat(2,1fr)}.mobile{display:block}.top .btn{padding:9px 11px}.table{font-size:13px}.table th:nth-child(3),.table td:nth-child(3){display:none}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side"><div class="logo">СКЛАД</div><div class="nav">
+<button class="active" data-page="dashboard">Главная</button>
+<button data-page="catalog">Каталог</button>
+<button data-page="income">Приход</button>
+<button data-page="expense">Расход</button>
+<button data-page="orders">Заказы производителю</button>
+</div></aside>
+<main class="main">
+<div class="top"><div class="title" id="title">Главная</div><button class="btn" onclick="openModal()">+ Добавить товар</button></div>
+<div id="content"></div>
+</main>
+</div>
+<div class="modal" id="modal"><div class="modalbox"><h3>Новый товар</h3>
+<label>Название</label><input id="name" placeholder="Например, Футболка">
+<label>Артикул</label><input id="sku" placeholder="ART-001">
+<label>Количество</label><input id="qty" type="number" value="0">
+<label>Склад</label><select id="warehouse"><option>Основной склад</option><option>Склад №2</option></select>
+<div class="actions"><button class="btn" onclick="addProduct()">Сохранить</button><button class="btn" style="background:#e9edf1;color:#18212b" onclick="closeModal()">Отмена</button></div>
+</div></div>
+<script>
+let products=JSON.parse(localStorage.getItem('products')||'[]');
+if(!products.length) products=[
+{name:'Футболка базовая',sku:'TS-001',qty:120,warehouse:'Основной склад'},
+{name:'Худи классическое',sku:'HD-002',qty:45,warehouse:'Основной склад'},
+{name:'Брюки прямые',sku:'PT-003',qty:18,warehouse:'Склад №2'}
+];
+const titles={dashboard:'Главная',catalog:'Каталог',income:'Приход',expense:'Расход',orders:'Заказы производителю'};
+function save(){localStorage.setItem('products',JSON.stringify(products))}
+function render(page='dashboard'){
+document.getElementById('title').textContent=titles[page];
+document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
+let c=document.getElementById('content');
+if(page==='dashboard') c.innerHTML=`<div class="cards">
+<div class="card"><div class="muted">Товаров в каталоге</div><div class="num">${products.length}</div></div>
+<div class="card"><div class="muted">Остаток товара</div><div class="num">${products.reduce((a,p)=>a+p.qty,0)}</div></div>
+<div class="card"><div class="muted">Складов</div><div class="num">2</div></div>
+<div class="card"><div class="muted">Заказов производителю</div><div class="num">0</div></div></div>
+<div class="panel"><h3>Последние товары</h3>${table()}</div>`;
+if(page==='catalog') c.innerHTML=`<div class="panel"><h3>Каталог товаров</h3>${table(true)}</div>`;
+if(page==='income') c.innerHTML=`<div class="panel"><h3>Приход товара</h3><p class="muted">Выберите товар и склад, укажите количество.</p><button class="btn" onclick="movement('Приход')">Оформить приход</button></div>`;
+if(page==='expense') c.innerHTML=`<div class="panel"><h3>Расход товара</h3><p class="muted">Выберите товар, склад и количество списания.</p><button class="btn" onclick="movement('Расход')">Оформить расход</button></div>`;
+if(page==='orders') c.innerHTML=`<div class="panel"><h3>Заказы производителю</h3><p class="muted">В первой версии раздел готов как основа для создания заказов.</p><button class="btn" onclick="alert('Функция создания заказа будет добавлена в следующей версии.')">+ Новый заказ</button></div>`;
+}
+function table(del=false){return `<table class="table"><tr><th>Товар</th><th>Артикул</th><th>Склад</th><th>Остаток</th>${del?'<th></th>':''}</tr>${products.map((p,i)=>`<tr><td>${p.name}</td><td>${p.sku}</td><td>${p.warehouse}</td><td><span class="badge">${p.qty}</span></td>${del?`<td><button onclick="removeProduct(${i})">Удалить</button></td>`:''}</tr>`).join('')}</table>`}
+function openModal(){document.getElementById('modal').classList.add('show')}
+function closeModal(){document.getElementById('modal').classList.remove('show')}
+function addProduct(){let name=document.getElementById('name').value.trim();if(!name)return alert('Введите название');products.push({name,sku:document.getElementById('sku').value||'—',qty:+document.getElementById('qty').value||0,warehouse:document.getElementById('warehouse').value});save();closeModal();render('catalog')}
+function removeProduct(i){products.splice(i,1);save();render('catalog')}
+function movement(type){let i=prompt('Введите номер товара из каталога (1-'+products.length+')');if(!i)return; i=+i-1;if(!products[i])return alert('Неверный номер');let q=+prompt('Количество:');if(!q||q<0)return;if(type==='Расход'&&q>products[i].qty)return alert('Недостаточно остатка');products[i].qty += type==='Приход'?q:-q;save();render(type==='Приход'?'income':'expense');alert(type+' оформлен')}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>render(b.dataset.page));render();
+</script>
+</body></html>
